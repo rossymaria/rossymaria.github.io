@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estimación COCOMO</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            margin: auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .factors {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .factor-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .factor-row label {
+            flex: 2;
+        }
+        .factor-row input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Estimación de Costos - COCOMO</h1>
+
+        <label for="entrada">Entrada:</label>
+        <input type="number" id="entrada" >
+
+        <label for="salida">Salida:</label>
+        <input type="number" id="salida" >
+
+        <label for="factorPonderacion">Seleccionar Factor de Ponderación:</label>
+        <select id="factorPonderacion">
+            <option value="organico">Orgánico (50-80)</option>
+            <option value="semi">Semi Acoplado (81-100)</option>
+            <option value="acoplado">Acoplado (101-150)</option>
+        </select>
+
+        <label for="customFactor">Ingrese un número para el Factor de Ponderación:</label>
+        <input type="number" id="customFactor" placeholder="Ingrese el número para el factor">
+
+        <!-- Nuevo campo de salario -->
+        <label for="salario">Salario por Usuario:</label>
+        <input type="number" id="salario" >
+
+        <button onclick="calcularCOCOMO()">Calcular</button>
+        <button onclick="limpiar()">Limpiar</button>
+
+        <div class="output" id="resultado"></div>
+    </div>
+
+    <script>
+        function calcularCOCOMO() {
+            const entrada = parseFloat(document.getElementById("entrada").value);
+            const salida = parseFloat(document.getElementById("salida").value);
+            const factorSeleccionado = document.getElementById("factorPonderacion").value;
+            const customFactor = parseFloat(document.getElementById("customFactor").value);
+            const salario = parseFloat(document.getElementById("salario").value);
+
+            let factor = 0;
+            const total = entrada + salida;
+
+            // Validación de salario
+            if (isNaN(salario)) {
+                document.getElementById("resultado").innerText = "Por favor, ingrese un salario válido.";
+                return;
+            }
+
+            // Determinar el factor según la selección
+            if (factorSeleccionado === "organico") {
+                factor = customFactor || 52; // Valor por defecto si no se ingresa un número
+            } else if (factorSeleccionado === "semi") {
+                factor = customFactor || 81; // Valor por defecto si no se ingresa un número
+            } else if (factorSeleccionado === "acoplado") {
+                factor = customFactor || 102; // Valor por defecto si no se ingresa un número
+            }
+
+            if (isNaN(entrada) || isNaN(salida)) {
+                document.getElementById("resultado").innerText = "Por favor, ingrese valores válidos.";
+                return;
+            }
+
+            const ldc = total * factor;
+            const mldc = ldc / 1000;
+
+            let a, b, c, d;
+            if (factor === 52) {
+                a = 2.4; b = 1.05; c = 2.5; d = 0.38;
+            } else if (factor === 81) {
+                a = 3.0; b = 1.12; c = 2.5; d = 0.35;
+            } else if (factor === 102) {
+                a = 3.6; b = 1.2; c = 2.5; d = 0.32;
+            }
+
+            const esfuerzo = a * Math.pow(mldc, b);
+            const tiempo = c * Math.pow(esfuerzo, d);
+            const costo = esfuerzo * salario;
+
+            // Cálculos adicionales
+            const cp = esfuerzo / tiempo; // Cálculo corregido de CP
+            const p = ldc / esfuerzo; // Productividad
+            const costoLdc = costo / ldc; // Costo por Línea de Código
+
+            document.getElementById("resultado").innerHTML = `
+                <p>Total Entradas y Salidas: ${total}</p>
+                CALCULO DE INSTRUCCIONES POR FACTOR DE PONDERACION
+                <p> LDC: ${ldc.toFixed(2)}</p>
+                <h1>CALCULO EN MILES DE LINEAS DE CÓDIGO</h1>
+                <p>MLDC: ${mldc.toFixed(2)}</p>
+                <h1>ESFUERZO NOMINAL</h1>
+                <p>(E): ${esfuerzo.toFixed(2)} personas mes</p>
+                <h1>CALCULO DE TIEMPO DE DESARROLLO</h1>
+                <p>(TD): ${tiempo.toFixed(2)} meses de trabajo</p>
+                <h1>CALCULO DE PERSONAL NECESARIO</h1>
+                <p>(CP): $${cp.toFixed(2)} personas</p>
+                <h1>CALCULO DE PRODUCTIVIDAD</h1>
+                <p>(P): ${p.toFixed(2)} líneas de código por mes</p>
+                <h1>COSTO DEL PROYECTO Y EL SALARIO</h1>
+                <p>Costo del Proyecto: $${costo.toFixed(2)}</p>
+                <p>Salario: ${salario} Bs</p>
+                <h1>ESTIMACIÓN DE CADA LÍNEA DE CÓDIGO</h1>
+                <p>(Costo LDC): Bs ${costoLdc.toFixed(2)}</p>
+            `;
+        }
+
+        function limpiar() {
+            document.getElementById("entrada").value = "";
+            document.getElementById("salida").value = "";
+            document.getElementById("factorPonderacion").value = "organico";
+            document.getElementById("customFactor").value = "";
+            document.getElementById("salario").value = "";
+            document.getElementById("resultado").innerText = "";
+        }
+    </script>
+</body>
+</html>
